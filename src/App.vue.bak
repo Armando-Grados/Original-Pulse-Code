@@ -1,0 +1,126 @@
+<template>
+  <div class="min-h-screen bg-gray-100 py-6 flex flex-col justify-center sm:py-12">
+    <h1 class="text-4xl font-bold mb-10 text-center">EVANCED Pulse</h1>
+    <div class="relative py-3 sm:max-w-xl sm:mx-auto">
+      <div class="absolute inset-0 bg-gradient-to-r from-cyan-400 to-light-blue-500 shadow-lg transform -skew-y-6 sm:skew-y-0 sm:-rotate-6 sm:rounded-3xl"></div>
+      <div class="relative px-4 py-10 bg-white shadow-lg sm:rounded-3xl sm:p-20">
+        <h2 class="text-2xl font-bold">How are we doing?</h2>
+        <div class="mt-5 space-y-3">
+          <button :disabled="buttonsDisabled.great" @click="callZapierWebhook('Great, keep up the good work!')" class="w-full bg-blue-500 text-white font-bold py-2 px-4 rounded">Great, keep up the good work!</button>
+          <button :disabled="buttonsDisabled.ok" @click="callZapierWebhook('Okay, but there is room for improvement in some areas.')" class="w-full bg-blue-500 text-white font-bold py-2 px-4 rounded">Okay, but there's room for improvement in some areas.</button>
+          <button :disabled="buttonsDisabled.notok" @click="callZapierWebhook('Not satisfied, needs significant improvement.')" class="w-full bg-blue-500 text-white font-bold py-2 px-4 rounded">Not satisfied, needs significant improvement.</button>
+        </div>
+        <div v-if="showMessageNotOk" v-bind:class="{ 'animate__shakeX': showMessage }" class="mt-5 animate__animated bg-yellow-200 p-4 rounded border border-yellow-300">
+          <p class="text-sm font-semibold">Thank you for your feedback. If you would like to share more about how we can improve, please <a href="https://calendly.com/evanced-net/evanced-customer-pulse" target="_blank" class="text-blue-600 underline">schedule a call with us</a>. We look forward to hearing from you!</p>
+        </div>
+        <div v-if="showMessageOk" v-bind:class="{ 'animate__shakeX': showMessage }" class="mt-5 animate__animated bg-yellow-200 p-4 rounded border border-yellow-300">
+          <p class="text-sm font-semibold">Thank you for sharing your feedback.</p>
+        </div>
+        <div v-if="showMessageGreat" v-bind:class="{ 'animate__shakeX': showMessage }" class="mt-5 animate__animated bg-yellow-200 p-4 rounded border border-yellow-300">
+          <p class="text-sm font-semibold">We're thrilled to hear that you had an awesome experience with us! If you're willing, we would greatly appreciate it if you could <a href="https://g.page/r/CVam69BGprYlEBM/review" target="_blank" class="text-blue-600 underline">leave us a Google Review</a>. Your positive feedback will help others learn about our services and the great work we do. Thank you for choosing us!</p>
+        </div>
+        <div v-if="showFeedbackForm" class="mt-5">
+          <form @submit.prevent="submitFeedback">
+            <label class="block font-bold mb-2">Please leave your feedback below:</label>
+            <textarea class="border rounded w-full py-2 px-3" rows="5" v-model="feedback"></textarea>
+            <button class="bg-blue-500 text-white font-bold py-2 px-4 rounded mt-2" type="submit">Submit Feedback</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script>
+import confetti from 'canvas-confetti';
+import 'animate.css';
+
+export default {
+  data() {
+    return {
+      showMessageNotOk: false,
+      showMessageGreat: false,
+      showMessageOk: false,
+      buttonsDisabled: {
+        great: false,
+        ok: false,
+        notok: false,
+      },
+    showFeedbackForm: false,
+    feedback: '',  
+    };
+  },
+  methods: {
+    async callZapierWebhook(buttonText) {
+      const webhookURL = 'https://hooks.zapier.com/hooks/catch/2829215/3uhamgs/';
+      const data = {
+        id: this.$route.params.id,
+        customer_acronym: this.$route.params.customerAcronym,
+        button_text: buttonText,
+      };
+
+      // Convert the data object to query string parameters
+      const queryString = new URLSearchParams(data).toString();
+
+      await fetch(`${webhookURL}?${queryString}`, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+        },
+      });
+
+      if (buttonText === 'Not satisfied, needs significant improvement.') {
+        this.showMessageNotOk = true;
+      } 
+      else if (buttonText == 'Great, keep up the good work!') {
+        this.showMessageGreat = true;
+        confetti({
+          particleCount: 100,
+          spread: 70,
+          origin: { y: 0.6 },
+        });
+      }
+      else if (buttonText == 'Okay, but there is room for improvement in some areas.') {
+          this.showFeedbackForm = true;
+      }
+
+      // Disable buttons
+      this.buttonsDisabled.ok = true;
+      this.buttonsDisabled.notok = true;
+      this.buttonsDisabled.great = true;
+    },
+
+ submitFeedback() {
+      const webhookURL = 'https://hooks.zapier.com/hooks/catch/2829215/3uhnc61/';
+      const data = {
+        id: this.$route.params.id,
+        customer_acronym: this.$route.params.customerAcronym,
+        feedback_text: this.feedback,
+      };
+
+      // Convert the data object to query string parameters
+      const queryString = new URLSearchParams(data).toString();
+
+      fetch(`${webhookURL}?${queryString}`, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+        },
+      })
+        .then(() => {
+          this.showFeedbackForm = false;
+          this.showMessageOk = true;
+          this.feedback = '';
+          confetti({
+          particleCount: 100,
+          spread: 70,
+          origin: { y: 0.6 },
+        });
+        })
+        .catch((error) => {
+          console.error('Error submitting feedback:', error);
+        });
+    },
+  },
+};
+</script>
